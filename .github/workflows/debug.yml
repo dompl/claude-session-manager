@@ -1,0 +1,95 @@
+name: Debug Repository
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Show complete repository structure
+      run: |
+        echo "=== COMPLETE REPOSITORY STRUCTURE ==="
+        echo "Working directory: $(pwd)"
+        echo ""
+        echo "All files and directories:"
+        find . -type f | sort
+        echo ""
+        echo "Directory tree:"
+        tree . || find . -type d | sort
+        echo ""
+        
+    - name: Check specific files
+      run: |
+        echo "=== CHECKING SPECIFIC FILES ==="
+        
+        echo "Looking for install.sh:"
+        ls -la install.sh 2>&1 || echo "install.sh NOT FOUND"
+        
+        echo -e "\nLooking for bin directory:"
+        ls -la bin/ 2>&1 || echo "bin/ directory NOT FOUND"
+        
+        echo -e "\nLooking for README.md:"
+        ls -la README.md 2>&1 || echo "README.md NOT FOUND"
+        
+        echo -e "\nAll .sh files in repository:"
+        find . -name "*.sh" -type f | sort
+        
+        echo -e "\nAll executable files:"
+        find . -type f -executable | sort
+        
+    - name: Check what GitHub Actions actually checked out
+      run: |
+        echo "=== GITHUB CHECKOUT DEBUG ==="
+        echo "Git status:"
+        git status
+        
+        echo -e "\nGit log (last 3 commits):"
+        git log --oneline -3
+        
+        echo -e "\nCurrent branch:"
+        git branch --show-current
+        
+        echo -e "\nAll files tracked by git:"
+        git ls-files | sort
+        
+    - name: Try to understand the repository
+      run: |
+        echo "=== REPOSITORY ANALYSIS ==="
+        
+        echo "Root directory contents:"
+        ls -la
+        
+        echo -e "\nFile count by type:"
+        echo "Shell scripts: $(find . -name "*.sh" | wc -l)"
+        echo "Markdown files: $(find . -name "*.md" | wc -l)"
+        echo "JSON files: $(find . -name "*.json" | wc -l)"
+        echo "Total files: $(find . -type f | wc -l)"
+        
+        echo -e "\nLargest files:"
+        find . -type f -exec ls -la {} \; | sort -k5 -nr | head -5
+        
+    - name: Show file contents (if they exist)
+      run: |
+        echo "=== FILE CONTENTS ==="
+        
+        if [ -f "install.sh" ]; then
+          echo "install.sh first 10 lines:"
+          head -10 install.sh
+        else
+          echo "install.sh does not exist"
+        fi
+        
+        if [ -f "bin/claude-save" ]; then
+          echo -e "\nbin/claude-save first 10 lines:"
+          head -10 bin/claude-save
+        else
+          echo -e "\nbin/claude-save does not exist"
+        fi
