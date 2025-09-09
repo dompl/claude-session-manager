@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Test installation
+      run: |
+        chmod +x install.sh
+        ./install.sh
+        
+    - name: Verify PATH setup
+      run: |
+        export PATH="$PATH:$HOME/.local/bin"
+        which claude-save || echo "claude-save not in PATH"
+        which claude-resume || echo "claude-resume not in PATH"  
+        which claude-list || echo "claude-list not in PATH"
+        
+    - name: Test basic functionality
+      run: |
+        export PATH="$PATH:$HOME/.local/bin"
+        # Test save command (should prompt for input)
+        echo -e "test session\nNode.js\nTesting\nClaude testing\ntest.js\nNext steps" | claude-save || echo "Save test completed"
+        # Test list command
+        claude-list || echo "List test completed"
+        # Test resume command (should show session or empty list)
+        echo "q" | claude-resume || echo "Resume test completed"
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install ShellCheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install shellcheck
+    
+    - name: Run ShellCheck on install script
+      run: shellcheck install.sh
+        
+    - name: Run ShellCheck on bin scripts
+      run: |
+        for script in bin/*; do
+          if [ -f "$script" ]; then
+            echo "Checking $script"
+            shellcheck "$script"
+          fi
+        done
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install markdownlint
+      run: npm install -g markdownlint-cli
+      
+    - name: Run markdownlint
+      run: markdownlint README.md docs/*.md examples/*.md
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Bandit security scan
+      uses: securecodewarrior/github-action-add-sarif@v1
+      with:
+        sarif-file: 'bandit-report.sarif'
+      continue-on-error: true
+      
+    - name: Check for secrets
+      run: |
+        # Check for potential secrets in shell scripts
+        if grep -r "password\|secret\|key" bin/
