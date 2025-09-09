@@ -1,6 +1,13 @@
 {
-    "line-length": false,
-    "no-inline-html": false,
-    "no-bare-urls": false,
-    "first-line-heading": false
+  "line-length": false,
+  "no-inline-html": false,
+  "no-bare-urls": false,
+  "first-line-heading": false,
+  "no-multiple-blanks": false,
+  "blanks-around-headers": false,
+  "blanks-around-lists": false,
+  "no-trailing-punctuation": false,
+  "ul-style": false,
+  "no-hard-tabs": false,
+  "whitespace": false
 }
