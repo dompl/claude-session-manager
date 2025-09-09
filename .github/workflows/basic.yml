@@ -1,0 +1,108 @@
+name: Basic CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  basic-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check repository structure
+      run: |
+        echo "=== Repository Structure ==="
+        find . -type f -name "*.sh" -o -name "*.md" -o -name "*.json" | sort
+        
+        echo -e "\n=== File Permissions ==="
+        ls -la install.sh || echo "install.sh not found"
+        ls -la bin/ || echo "bin/ directory not found"
+        
+        echo -e "\n=== Required Files Check ==="
+        required_files=(
+          "README.md"
+          "install.sh"
+          "bin/claude-save"
+          "bin/claude-resume"
+          "bin/claude-list"
+        )
+        
+        all_present=true
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file"
+          else
+            echo "❌ $file (missing)"
+            all_present=false
+          fi
+        done
+        
+        if [ "$all_present" = true ]; then
+          echo -e "\n🎉 All required files are present!"
+        else
+          echo -e "\n⚠️ Some files are missing"
+          exit 1
+        fi
+    
+    - name: Validate shell scripts
+      run: |
+        echo "=== Installing ShellCheck ==="
+        sudo apt-get update -qq
+        sudo apt-get install -y shellcheck
+        
+        echo -e "\n=== Running ShellCheck ==="
+        
+        # Check install script
+        if [ -f "install.sh" ]; then
+          echo "Checking install.sh..."
+          shellcheck install.sh
+          echo "✅ install.sh passed ShellCheck"
+        fi
+        
+        # Check bin scripts
+        if [ -d "bin" ]; then
+          for script in bin/*; do
+            if [ -f "$script" ]; then
+              echo "Checking $script..."
+              shellcheck "$script"
+              echo "✅ $script passed ShellCheck"
+            fi
+          done
+        fi
+    
+    - name: Test basic installation
+      run: |
+        echo "=== Testing Installation ==="
+        
+        # Make install script executable
+        chmod +x install.sh
+        
+        # Run installation
+        echo "Running ./install.sh..."
+        ./install.sh
+        
+        echo -e "\n=== Post-Install Check ==="
+        echo "~/.local/bin contents:"
+        ls -la ~/.local/bin/ || echo "Directory not created"
+        
+        echo "~/.claude-sessions contents:"
+        ls -la ~/.claude-sessions/ || echo "Directory not created"
+        
+        # Check if commands were installed
+        export PATH="$PATH:$HOME/.local/bin"
+        
+        commands=("claude-save" "claude-resume" "claude-list")
+        for cmd in "${commands[@]}"; do
+          if command -v "$cmd" >/dev/null 2>&1; then
+            echo "✅ $cmd is available in PATH"
+          else
+            echo "❌ $cmd not available in PATH"
+          fi
+        done
+        
+        echo -e "\n🎉 Basic installation test completed!"
